@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Family Chart - GoJS Genogram</title>
+  <title>Family Chart - Genogram (Open Source)</title>
   <style>
     * {
       margin: 0;
@@ -12,22 +12,31 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      background: #f5f5f5;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      overflow: hidden;
     }
 
     .header {
-      background: #2c3e50;
-      color: white;
-      padding: 1rem 2rem;
+      background: #16213e;
+      padding: 0.75rem 1.5rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      border-bottom: 1px solid #0f3460;
     }
 
     .header h1 {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       font-weight: 500;
+      color: #e94560;
+    }
+
+    .header-subtitle {
+      font-size: 0.75rem;
+      color: #888;
+      margin-left: 1rem;
     }
 
     .header-controls {
@@ -36,187 +45,293 @@
     }
 
     .header-controls button {
-      background: #3498db;
-      color: white;
-      border: none;
-      padding: 0.5rem 1rem;
+      background: #0f3460;
+      color: #eee;
+      border: 1px solid #e94560;
+      padding: 0.4rem 0.8rem;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 0.875rem;
-      transition: background 0.2s;
+      font-size: 0.8rem;
+      transition: all 0.2s;
     }
 
     .header-controls button:hover {
-      background: #2980b9;
+      background: #e94560;
     }
 
-    .container {
-      display: flex;
-      height: calc(100vh - 60px);
+    #FamilyChart {
+      width: 100%;
+      height: calc(100vh - 50px);
+      background: #1a1a2e;
     }
 
-    #myDiagramDiv {
-      flex: 1;
-      background: white;
-      border: 1px solid #ddd;
+    /* Genogram Card Styles */
+    .genogram-card {
+      cursor: pointer;
+      transition: transform 0.2s;
     }
 
-    .sidebar {
-      width: 300px;
-      background: white;
-      border-left: 1px solid #ddd;
-      padding: 1rem;
-      overflow-y: auto;
+    .genogram-card:hover {
+      transform: scale(1.05);
     }
 
-    .sidebar h3 {
-      font-size: 1rem;
-      margin-bottom: 1rem;
-      color: #2c3e50;
-    }
-
-    .legend {
-      margin-bottom: 1.5rem;
-    }
-
-    .legend-item {
+    /* Male - Square */
+    .genogram-shape-male {
+      width: 60px;
+      height: 60px;
+      background: #4a90a4;
+      border: 3px solid #2c5f72;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.5rem;
-      font-size: 0.875rem;
-    }
-
-    .legend-shape {
-      width: 24px;
-      height: 24px;
-      border: 2px solid #333;
-    }
-
-    .legend-shape.male {
-      background: white;
-    }
-
-    .legend-shape.female {
-      background: white;
-      border-radius: 50%;
-    }
-
-    .legend-shape.unknown {
-      background: white;
-      clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-    }
-
-    .legend-shape.deceased {
-      background: linear-gradient(to bottom right, white 45%, transparent 45%, transparent 55%, white 55%);
+      justify-content: center;
       position: relative;
     }
 
-    .legend-shape.deceased::after {
+    /* Female - Circle */
+    .genogram-shape-female {
+      width: 60px;
+      height: 60px;
+      background: #a45a6e;
+      border: 3px solid #723d4a;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Unknown - Diamond */
+    .genogram-shape-unknown {
+      width: 60px;
+      height: 60px;
+      background: #7a7a8c;
+      border: 3px solid #4a4a5c;
+      transform: rotate(45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .genogram-shape-unknown .genogram-content {
+      transform: rotate(-45deg);
+    }
+
+    /* Deceased indicator */
+    .genogram-deceased::after {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(135deg, transparent 45%, #333 45%, #333 55%, transparent 55%);
+      background: linear-gradient(135deg,
+        transparent 45%,
+        #333 45%,
+        #333 55%,
+        transparent 55%
+      );
+      pointer-events: none;
     }
 
-    #myInspectorDiv {
+    /* Proband indicator */
+    .genogram-proband::before {
+      content: '▶';
       position: absolute;
-      display: none;
-      background: white;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      padding: 0.75rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      z-index: 1000;
-      max-width: 250px;
-      font-size: 0.875rem;
+      bottom: -20px;
+      left: -15px;
+      color: #e94560;
+      font-size: 1.2rem;
+      transform: rotate(-45deg);
     }
 
-    #myInspectorDiv table {
-      width: 100%;
-      border-collapse: collapse;
+    /* Twin indicator */
+    .genogram-twin-marker {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #e94560;
+      color: white;
+      font-size: 0.6rem;
+      padding: 2px 5px;
+      border-radius: 10px;
     }
 
-    #myInspectorDiv td {
-      padding: 0.25rem 0;
-    }
-
-    #myInspectorDiv td:first-child {
+    /* Name label */
+    .genogram-name {
+      position: absolute;
+      bottom: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      font-size: 0.75rem;
       font-weight: 600;
-      color: #666;
-      padding-right: 0.5rem;
+      color: #eee;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
+    /* Birth year */
+    .genogram-birth {
+      font-size: 0.65rem;
+      color: #aaa;
+      position: absolute;
+      bottom: -38px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    /* Attribute quadrants */
+    .genogram-attributes {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      overflow: hidden;
+      border-radius: inherit;
+    }
+
+    .genogram-attr {
+      opacity: 0.7;
+    }
+
+    /* Adoption bracket */
+    .genogram-adopted {
+      border: 2px dashed #e94560 !important;
+    }
+
+    /* Legend panel */
+    .legend {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(22, 33, 62, 0.95);
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid #0f3460;
+      font-size: 0.75rem;
+      z-index: 100;
+    }
+
+    .legend h4 {
+      margin-bottom: 0.5rem;
+      color: #e94560;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .legend-shape {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #666;
+    }
+
+    .legend-shape.male {
+      background: #4a90a4;
+    }
+
+    .legend-shape.female {
+      background: #a45a6e;
+      border-radius: 50%;
+    }
+
+    .legend-shape.unknown {
+      background: #7a7a8c;
+      transform: rotate(45deg) scale(0.7);
+    }
+
+    /* Stats */
     .stats {
-      background: #ecf0f1;
+      position: fixed;
+      top: 70px;
+      right: 20px;
+      background: rgba(22, 33, 62, 0.95);
       padding: 0.75rem;
-      border-radius: 4px;
-      font-size: 0.875rem;
+      border-radius: 8px;
+      border: 1px solid #0f3460;
+      font-size: 0.75rem;
+      z-index: 100;
     }
 
     .stats-item {
       display: flex;
       justify-content: space-between;
+      gap: 1rem;
       margin-bottom: 0.25rem;
     }
 
-    .stats-item:last-child {
-      margin-bottom: 0;
+    /* Family-chart overrides */
+    .f3 .card {
+      cursor: pointer;
+    }
+
+    .f3 .card-inner {
+      overflow: visible !important;
+    }
+
+    .f3 .link {
+      stroke: #4a5568;
+      stroke-width: 2;
+    }
+
+    .f3 .link.spouse {
+      stroke: #e94560;
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>Family Chart - GoJS Genogram</h1>
+    <div style="display: flex; align-items: center;">
+      <h1>Family Chart Genogram</h1>
+      <span class="header-subtitle">Open Source (donatso/family-chart)</span>
+    </div>
     <div class="header-controls">
-      <button id="myScrollToProband">Go to Proband</button>
-      <button id="myPrintButton">Print</button>
-      <button id="myDownloadButton">Download SVG</button>
+      <button id="btnZoomIn">Zoom In</button>
+      <button id="btnZoomOut">Zoom Out</button>
+      <button id="btnFit">Fit</button>
+      <button id="btnExport">Export SVG</button>
     </div>
   </div>
 
-  <div class="container">
-    <div id="myDiagramDiv"></div>
+  <div id="FamilyChart"></div>
 
-    <div class="sidebar">
-      <h3>Legend</h3>
-      <div class="legend">
-        <div class="legend-item">
-          <div class="legend-shape male"></div>
-          <span>Male</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-shape female"></div>
-          <span>Female</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-shape unknown"></div>
-          <span>Unknown Sex</span>
-        </div>
-      </div>
-
-      <h3>Statistics</h3>
-      <div class="stats" id="statsDiv">
-        <div class="stats-item">
-          <span>Total Members:</span>
-          <span id="totalMembers">-</span>
-        </div>
-        <div class="stats-item">
-          <span>Generations:</span>
-          <span id="generations">-</span>
-        </div>
-        <div class="stats-item">
-          <span>Proband:</span>
-          <span id="probandName">-</span>
-        </div>
-      </div>
+  <div class="stats" id="statsPanel">
+    <div class="stats-item">
+      <span>Total Members:</span>
+      <span id="totalMembers">-</span>
+    </div>
+    <div class="stats-item">
+      <span>Proband:</span>
+      <span id="probandName">-</span>
     </div>
   </div>
 
-  <div id="myInspectorDiv"></div>
+  <div class="legend">
+    <h4>Legend</h4>
+    <div class="legend-item">
+      <div class="legend-shape male"></div>
+      <span>Male</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-shape female"></div>
+      <span>Female</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-shape unknown"></div>
+      <span>Unknown</span>
+    </div>
+  </div>
 
   <script type="module" src="/src/index.js"></script>
 </body>

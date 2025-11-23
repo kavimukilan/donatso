@@ -1,7 +1,7 @@
 {
-  "name": "family-chart-gojs",
+  "name": "family-chart-genogram",
   "version": "1.0.0",
-  "description": "Family tree/genogram visualization using GoJS - based on donatso/family-chart",
+  "description": "Family tree genogram using donatso/family-chart (free & open source)",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
@@ -10,7 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "gojs": "^3.0.0"
+    "d3": "^7.9.0",
+    "family-chart": "^0.9.0"
   },
   "devDependencies": {
     "vite": "^5.0.0"
@@ -18,13 +19,9 @@
   "keywords": [
     "family-tree",
     "genogram",
-    "gojs",
     "genealogy",
-    "pedigree-chart"
+    "pedigree-chart",
+    "open-source"
   ],
-  "license": "ISC",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/donatso/family-chart"
-  }
+  "license": "ISC"
 }
