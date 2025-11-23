@@ -18,16 +18,19 @@ let myDiagram;
 function init() {
   // Create the diagram with the custom GenogramLayout
   const layout = new GenogramLayout({
-    isInitial: false,
+    isInitial: true,
     direction: 90,
-    layerSpacing: 20,
-    columnSpacing: 10
+    layerSpacing: 30,
+    columnSpacing: 15
   });
 
   myDiagram = new go.Diagram("myDiagramDiv", {
     isReadOnly: false,
     initialAutoScale: go.AutoScale.Uniform,
-    "animationManager.isInitial": false,
+    initialContentAlignment: go.Spot.Center,
+    contentAlignment: go.Spot.Center,
+    "animationManager.isEnabled": true,
+    "animationManager.isInitial": true,
     "toolManager.hoverDelay": 100,
     maxSelectionCount: 1,
     "ChangedSelection": e => {
@@ -58,17 +61,23 @@ function init() {
   myDiagram.nodeTemplateMap.add("TwinLabel", createTwinLabelTemplate());
 
   // Load data
-  load();
+  try {
+    load();
+    console.log("Family Chart initialized successfully!");
+    console.log(`Total nodes: ${myDiagram.model.nodeDataArray.length}`);
+    console.log(`Total links: ${myDiagram.model.linkDataArray.length}`);
+
+    // Ensure content is visible
+    myDiagram.zoomToFit();
+  } catch (err) {
+    console.error("Error loading genogram:", err);
+  }
 
   // Update stats
   updateStats();
 
   // Setup button handlers
   setupButtons();
-
-  console.log("Family Chart initialized successfully!");
-  console.log(`Total nodes: ${myDiagram.model.nodeDataArray.length}`);
-  console.log(`Total links: ${myDiagram.model.linkDataArray.length}`);
 }
 
 /**
@@ -76,13 +85,23 @@ function init() {
  */
 function load() {
   myDiagram.clear();
-  myDiagram.model = go.Model.fromJson(JSON.stringify(genogramData));
-  myDiagram.model.pointsDigits = 1;
 
-  // Layout if no positions are stored
-  if (!myDiagram.nodes.all(node => node.isLinkLabel || node.location.isReal())) {
-    myDiagram.layoutDiagram(true);
-  }
+  // Create a GraphLinksModel with proper configuration for genograms
+  const model = new go.GraphLinksModel({
+    copiesArrays: true,
+    linkLabelKeysProperty: "labelKeys",
+    nodeDataArray: genogramData.nodeDataArray,
+    linkDataArray: genogramData.linkDataArray
+  });
+
+  // Set the model data (proband info)
+  model.modelData = genogramData.modelData;
+  model.pointsDigits = 1;
+
+  myDiagram.model = model;
+
+  // Layout the diagram
+  myDiagram.layoutDiagram(true);
 
   // Setup identical twins connections
   setupIdenticalTwins(myDiagram);
