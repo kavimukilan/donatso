@@ -9,6 +9,7 @@ import {
   createIdenticalLinkTemplate,
   createTwinLabelTemplate
 } from './templates.js';
+import * as multipleBirthUtils from './multipleBirthUtils.js';
 
 let myDiagram;
 
@@ -280,5 +281,7 @@ function setupButtons() {
 // Initialize when DOM is ready
 window.addEventListener("DOMContentLoaded", init);
 
-// Export for debugging
+// Export for debugging and API access
 window.myDiagram = myDiagram;
+window.multipleBirthUtils = multipleBirthUtils;
+window.go = go;

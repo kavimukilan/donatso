@@ -2,35 +2,62 @@ import * as go from 'gojs';
 import { TwinLink } from './GenogramLayout.js';
 
 /**
- * Compute fill color based on attribute
+ * GoJS Genogram Node Templates
+ * Based on the official GoJS genogram sample
+ */
+
+// Standard genogram colors for attributes
+const ATTRIBUTE_COLORS = {
+  'A': '#5d8cc1',  // Blue
+  'B': '#775a4a',  // Brown
+  'C': '#94251e',  // Dark Red
+  'D': '#ca6958',  // Coral
+  'E': '#68bfaf',  // Teal
+  'F': '#23848a',  // Dark Teal
+  'G': '#cfdf41',  // Yellow-Green
+  'H': '#717c42',  // Olive
+  'V': '#332d31',  // Dark Gray
+  'M': '#9b59b6',  // Purple
+  'default': 'white'
+};
+
+/**
+ * Get fill color for an attribute code
  */
 export function computeFill(attr) {
-  switch (attr[0].toUpperCase()) {
-    case "A": return '#5d8cc1';
-    case "B": return '#775a4a';
-    case "C": return '#94251e';
-    case "D": return '#ca6958';
-    case "E": return '#68bfaf';
-    case "F": return '#23848a';
-    case "G": return '#cfdf41';
-    case "H": return '#717c42';
-    case "V": return '#332d31';
-    default: return "white";
-  }
+  if (!attr || attr.length === 0) return ATTRIBUTE_COLORS.default;
+  const code = attr[0].toUpperCase();
+  return ATTRIBUTE_COLORS[code] || ATTRIBUTE_COLORS.default;
 }
 
 /**
- * Compute alignment for attribute indicators in quadrants
+ * Compute quadrant alignment for attribute indicators
+ * Creates a 2x2 grid pattern for up to 4 attributes
  */
 export function computeAlignment(idx) {
-  return new go.Spot(0.5, 0.5, (idx & 1) === 0 ? -12.5 : 12.5, (idx & 2) === 0 ? -12.5 : 12.5);
+  // Position attributes in quadrants: TL, TR, BL, BR
+  const xOffset = (idx & 1) === 0 ? -12.5 : 12.5;
+  const yOffset = (idx & 2) === 0 ? -12.5 : 12.5;
+  return new go.Spot(0.5, 0.5, xOffset, yOffset);
 }
 
 /**
  * Check if person is deceased
  */
 export function isDead(data) {
-  return !!data.death ? 1 : 0;
+  return !!data.death;
+}
+
+/**
+ * Get figure based on sex
+ * Male = Square, Female = Circle, Unknown = Diamond
+ */
+export function getSexFigure(sex) {
+  switch (sex) {
+    case 'M': return 'Square';
+    case 'F': return 'Circle';
+    default: return 'Diamond';  // Unknown sex uses diamond in standard genograms
+  }
 }
 
 /**
@@ -67,7 +94,7 @@ export function findMates(node, layout) {
 }
 
 /**
- * Find children of a node (optionally with a specific mate)
+ * Find children of a node
  */
 export function findChildren(node, layout, mate) {
   const children = [];
@@ -87,29 +114,29 @@ export function findChildren(node, layout, mate) {
 }
 
 /**
- * Highlight ancestors of a node
+ * Highlight ancestors recursively
  */
 function highlightAncestors(node, parts, layout) {
   const parents = findParents(node, layout);
   parts.addAll(parents);
-  if (node.data.adopted === "in") return;
+  if (node.data && node.data.adopted === "in") return;
   parents.forEach(parent => highlightAncestors(parent, parts, layout));
 }
 
 /**
- * Highlight descendants of a node
+ * Highlight descendants recursively
  */
 function highlightDependents(node, parts, layout) {
   const children = findChildren(node, layout);
   children.forEach(child => {
-    if (child.data.adopted === "in") return;
+    if (child.data && child.data.adopted === "in") return;
     parts.add(child);
     highlightDependents(child, parts, layout);
   });
 }
 
 /**
- * Highlight related nodes on mouse enter/leave
+ * Highlight related nodes on hover
  */
 export function highlightRelated(node, show, layout) {
   if (show) {
@@ -123,41 +150,65 @@ export function highlightRelated(node, show, layout) {
 }
 
 /**
- * Create the main person node template
+ * Create the main person node template (GoJS Genogram style)
  */
 export function createNodeTemplate(layout) {
+  const nodeSize = 50;
+
   return new go.Node("Spot", {
     locationSpot: go.Spot.Center,
+    locationObjectName: "ICON",
+    selectionObjectName: "ICON",
     layoutConditions: go.LayoutConditions.Standard & ~go.LayoutConditions.NodeSized,
     mouseEnter: (e, node) => highlightRelated(node, true, layout),
-    mouseLeave: (e, node) => highlightRelated(node, false, layout)
+    mouseLeave: (e, node) => highlightRelated(node, false, layout),
+    toolTip: go.GraphObject.build("ToolTip")
+      .add(
+        new go.Panel("Vertical")
+          .add(
+            new go.TextBlock({ margin: 4, font: "bold 12pt sans-serif" })
+              .bind("text", "name"),
+            new go.TextBlock({ margin: 2 })
+              .bind("text", "sex", s => s === 'M' ? 'Male' : s === 'F' ? 'Female' : 'Unknown'),
+            new go.TextBlock({ margin: 2 })
+              .bind("text", "birth", b => b ? `Birth: ${b}` : ""),
+            new go.TextBlock({ margin: 2 })
+              .bind("text", "death", d => d === true ? "Deceased" : d ? `Death: ${d}` : "")
+          )
+      )
   })
     .bindTwoWay("location", "loc", go.Point.parse, go.Point.stringifyFixed(1))
     .add(
-      // Main shape (square for male, circle for female, triangle for unknown)
+      // Main shape - Square for male, Circle for female, Diamond for unknown
       new go.Shape({
         name: "ICON",
-        width: 50, height: 50,
-        fill: "white", stroke: "black", strokeWidth: 1,
+        width: nodeSize,
+        height: nodeSize,
+        fill: "white",
+        stroke: "#333",
+        strokeWidth: 2,
         portId: ""
       })
-        .bind("figure", "sex", s => s === "M" ? "Square" : (s === "F" ? "Circle" : "Triangle"))
+        .bind("figure", "sex", getSexFigure)
         .bind("fill"),
 
-      // Attribute indicators panel (genetic markers)
+      // Attribute indicators panel - colored quadrants
       new go.Panel("Spot", {
         isClipping: true,
-        width: 49, height: 49,
+        width: nodeSize - 1,
+        height: nodeSize - 1,
         itemTemplate:
           new go.Panel()
             .bindObject("alignment", "itemIndex", computeAlignment)
             .add(
               new go.Shape({
-                width: 25, height: 25, strokeWidth: 0,
+                width: 25,
+                height: 25,
+                strokeWidth: 0,
                 toolTip:
                   go.GraphObject.build("ToolTip")
                     .add(
-                      new go.TextBlock()
+                      new go.TextBlock({ margin: 3 })
                         .bind("text", "")
                     )
               })
@@ -166,59 +217,123 @@ export function createNodeTemplate(layout) {
       })
         .bind("itemArray", "a")
         .add(
-          new go.Shape({ width: 49, height: 49, strokeWidth: 0 })
-            .bind("figure", "sex", s => s === "M" ? "Square" : (s === "F" ? "Circle" : "Triangle"))
+          new go.Shape({
+            width: nodeSize - 1,
+            height: nodeSize - 1,
+            strokeWidth: 0,
+            fill: "transparent"
+          })
+            .bind("figure", "sex", getSexFigure)
         ),
 
-      // Proband indicator (arrow)
+      // Proband indicator (arrow pointing to the focal individual)
       new go.Shape({
-        alignment: go.Spot.BottomLeft, alignmentFocus: go.Spot.TopRight,
-        fill: "darkorange", stroke: "darkorange", strokeWidth: 3, scale: 2,
+        alignment: go.Spot.BottomLeft,
+        alignmentFocus: go.Spot.TopRight,
+        fill: "darkorange",
+        stroke: "darkorange",
+        strokeWidth: 3,
+        scale: 2,
         geometryString: "F1 M20 0 L14.5 5.5 12 1z M18 1 L0 10"
       })
         .bindModel("visible", "proband", (key, shp) => shp.part.key === key),
 
-      // Highlight border
-      new go.Shape({ fill: null, stroke: null, strokeWidth: 4, width: 55, height: 55 })
-        .bindObject("stroke", "isHighlighted", h => h ? "lightcoral" : null),
+      // Selection/highlight border
+      new go.Shape({
+        fill: null,
+        stroke: null,
+        strokeWidth: 4,
+        width: nodeSize + 6,
+        height: nodeSize + 6
+      })
+        .bind("figure", "sex", getSexFigure)
+        .bindObject("stroke", "isHighlighted", h => h ? "lightcoral" : null)
+        .bindObject("stroke", "isSelected", s => s ? "#3498db" : null),
 
-      // Deceased indicator (diagonal line)
-      new go.Shape({ opacity: 0, geometryString: "M60 0 L0 60" })
-        .bind("opacity", "", data => (isDead(data) && (!data.reproduction || data.reproduction === "T" || data.reproduction === "SB")) ? 1 : 0),
+      // Deceased indicator (diagonal line through shape)
+      new go.Shape({
+        stroke: "#333",
+        strokeWidth: 2,
+        opacity: 0,
+        geometryString: "M0 0 L60 60"
+      })
+        .bind("opacity", "", data =>
+          (isDead(data) && (!data.reproduction || data.reproduction === "T" || data.reproduction === "SB")) ? 1 : 0
+        ),
 
-      // Adopted indicator (brackets)
-      new go.Shape({ opacity: 0, width: 55, height: 55, geometryString: "M10 0 L0 0 0 55 10 55 M45 0 L55 0 55 55 45 55" })
+      // Stillbirth indicator (small filled shape)
+      new go.Shape({
+        width: 15,
+        height: 15,
+        fill: "#333",
+        stroke: null,
+        opacity: 0
+      })
+        .bind("figure", "sex", getSexFigure)
+        .bind("opacity", "reproduction", r => r === "SB" ? 1 : 0),
+
+      // Adopted indicator - brackets
+      new go.Shape({
+        stroke: "#333",
+        strokeWidth: 2,
+        opacity: 0,
+        width: nodeSize + 6,
+        height: nodeSize + 6,
+        geometryString: "M10 0 L0 0 0 56 10 56 M46 0 L56 0 56 56 46 56"
+      })
         .bind("opacity", "adopted", ad => (ad === "in" || ad === "out") ? 1 : 0),
 
-      // Name label
+      // Multiple birth indicator (shows twin/triplet number)
       new go.TextBlock({
-        alignment: go.Spot.Bottom, alignmentFocus: new go.Spot(0.5, 0, 0, -5),
-        height: 28,
-        font: "bold 10pt sans-serif",
+        alignment: new go.Spot(1, 0, 5, 0),
+        alignmentFocus: go.Spot.TopLeft,
+        font: "9pt sans-serif",
+        stroke: "#666",
+        visible: false
+      })
+        .bind("visible", "multiple", m => m !== undefined && m > 0)
+        .bind("text", "multiple", m => m ? `×${m}` : ""),
+
+      // Name label below the node
+      new go.TextBlock({
+        alignment: go.Spot.Bottom,
+        alignmentFocus: new go.Spot(0.5, 0, 0, -8),
+        maxSize: new go.Size(90, 40),
+        font: "bold 11pt sans-serif",
         textAlign: "center",
-        maxSize: new go.Size(85, NaN),
-        background: "rgba(255,255,255,0.75)",
-        editable: true
+        wrap: go.Wrap.DesiredSize,
+        overflow: go.TextOverflow.Ellipsis,
+        editable: true,
+        background: "rgba(255,255,255,0.85)"
       })
         .bindTwoWay("text", "name")
     );
 }
 
 /**
- * Create the parent-child link template
+ * Create the parent-child link template with twin support
  */
 export function createLinkTemplate() {
   return new TwinLink({
     selectable: false,
-    routing: go.Routing.Orthogonal, fromEndSegmentLength: 50,
-    fromSpot: go.Spot.Bottom, toSpot: go.Spot.Top,
+    routing: go.Routing.Orthogonal,
+    fromEndSegmentLength: 4,
+    toEndSegmentLength: 20,
+    fromSpot: go.Spot.Bottom,
+    toSpot: go.Spot.Top,
     layerName: "Background"
   })
     .bindTwoWay("points")
     .add(
-      new go.Shape({ stroke: "black", strokeWidth: 2, strokeMiterLimit: 1 })
-        .bindObject("strokeDashArray", "toNode", child => child.data.adopted === "in" ? [6, 4] : null)
-        .bindObject("stroke", "isHighlighted", h => h ? "green" : "black")
+      new go.Shape({
+        stroke: "#333",
+        strokeWidth: 2,
+        strokeMiterLimit: 1
+      })
+        .bindObject("strokeDashArray", "toNode", child =>
+          child.data && child.data.adopted === "in" ? [6, 4] : null
+        )
+        .bindObject("stroke", "isHighlighted", h => h ? "#27ae60" : "#333")
     );
 }
 
@@ -229,15 +344,41 @@ export function createMateLinkTemplate() {
   return new go.Link({
     selectable: false,
     routing: go.Routing.AvoidsNodes,
-    fromSpot: go.Spot.LeftRightSides, toSpot: go.Spot.LeftRightSides,
-    isTreeLink: false, layerName: "Background"
+    fromSpot: go.Spot.LeftRightSides,
+    toSpot: go.Spot.LeftRightSides,
+    isTreeLink: false,
+    layerName: "Background"
   })
     .bindTwoWay("points")
     .add(
-      new go.Shape({ strokeWidth: 2, stroke: "blue" })
-        .bindObject("stroke", "isHighlighted", h => h ? "green" : "blue"),
-      new go.Shape({ visible: false, geometryString: "M12 0 L0 16 M16 0 L 4 16", segmentIndex: 1 })
-        .bind("visible", "divorced")
+      // Main marriage line
+      new go.Shape({
+        strokeWidth: 2,
+        stroke: "#2980b9"
+      })
+        .bindObject("stroke", "isHighlighted", h => h ? "#27ae60" : "#2980b9"),
+
+      // Divorce indicator (double slash marks)
+      new go.Shape({
+        visible: false,
+        stroke: "#c0392b",
+        strokeWidth: 2,
+        geometryString: "M12 0 L0 16 M16 0 L4 16",
+        segmentIndex: 1,
+        segmentFraction: 0.5
+      })
+        .bind("visible", "divorced"),
+
+      // Separated indicator (single slash)
+      new go.Shape({
+        visible: false,
+        stroke: "#e67e22",
+        strokeWidth: 2,
+        geometryString: "M8 0 L0 12",
+        segmentIndex: 1,
+        segmentFraction: 0.5
+      })
+        .bind("visible", "separated")
     );
 }
 
@@ -247,32 +388,41 @@ export function createMateLinkTemplate() {
 export function createMateLabelTemplate() {
   return new go.Node({
     selectable: false,
-    width: 1, height: 1,
+    width: 1,
+    height: 1,
     locationSpot: go.Spot.Center
   })
     .bindTwoWay("location", "loc", go.Point.parse, go.Point.stringifyFixed(1));
 }
 
 /**
- * Create the Identical twin link template
+ * Create the identical twin link template (horizontal line between twins)
  */
 export function createIdenticalLinkTemplate() {
   return new go.Link({
-    selectable: false, isLayoutPositioned: false,
-    isTreeLink: false, layerName: "Background"
+    selectable: false,
+    isLayoutPositioned: false,
+    isTreeLink: false,
+    layerName: "Background"
   })
     .add(
-      new go.Shape({ strokeWidth: 2, stroke: "slateblue" })
+      new go.Shape({
+        strokeWidth: 2,
+        stroke: "#8e44ad"  // Purple for identical twins
+      })
     );
 }
 
 /**
- * Create the TwinLabel node template
+ * Create the TwinLabel node template (for connecting twin lines)
  */
 export function createTwinLabelTemplate() {
   return new go.Node({
-    selectable: false, isLayoutPositioned: false,
-    width: 1, height: 1,
-    segmentIndex: -2, segmentFraction: 0.333
+    selectable: false,
+    isLayoutPositioned: false,
+    width: 1,
+    height: 1,
+    segmentIndex: -2,
+    segmentFraction: 0.333
   });
 }
