@@ -1,0 +1,30 @@
+{
+  "name": "family-chart-gojs",
+  "version": "1.0.0",
+  "description": "Family tree/genogram visualization using GoJS - based on donatso/family-chart",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "gojs": "^3.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "keywords": [
+    "family-tree",
+    "genogram",
+    "gojs",
+    "genealogy",
+    "pedigree-chart"
+  ],
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/donatso/family-chart"
+  }
+}
