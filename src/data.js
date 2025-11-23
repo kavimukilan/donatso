@@ -7,6 +7,14 @@
 export const PROBAND_ID = 'bill';
 
 /**
+ * Relationship statuses between couples
+ * Key format: 'person1-person2' (alphabetically sorted)
+ */
+export const relationshipStatus = {
+  'claire-claire-ex': 'divorced'  // Claire and Mark are divorced
+};
+
+/**
  * Family data in donatso format
  * Each person has: id, data (personal info), rels (relationships)
  */
@@ -143,7 +151,12 @@ export const genogramData = [
   {
     id: 'claire',
     data: { 'first name': 'Claire', gender: 'F', birthday: '1985', attributes: ['B34', 'G4'] },
-    rels: { parents: ['aaron', 'alice'] }
+    rels: { spouses: ['claire-ex'], parents: ['aaron', 'alice'] }
+  },
+  {
+    id: 'claire-ex',
+    data: { 'first name': 'Mark', gender: 'M', birthday: '1983', attributes: ['H23'] },
+    rels: { spouses: ['claire'] }
   },
   {
     id: 'carol',

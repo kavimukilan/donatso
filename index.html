@@ -328,6 +328,29 @@
     .proband-arrow-svg {
       pointer-events: none;
     }
+
+    /* Relationship link styles */
+    .link-divorced {
+      stroke: #e74c3c !important;
+      stroke-dasharray: 8,4 !important;
+    }
+
+    .link-separated {
+      stroke: #f39c12 !important;
+      stroke-dasharray: 4,4 !important;
+    }
+
+    .relationship-marker {
+      pointer-events: none;
+    }
+
+    .divorce-line {
+      stroke-linecap: round;
+    }
+
+    .separated-line {
+      stroke-linecap: round;
+    }
   </style>
 </head>
 <body>
@@ -393,6 +416,15 @@
     <div class="legend-item">
       <div style="width:20px;height:3px;background:#9b59b6;"></div>
       <span>Identical</span>
+    </div>
+    <h4 style="margin-top: 0.75rem;">Relationships</h4>
+    <div class="legend-item">
+      <div style="width:20px;height:3px;background:#e74c3c;border-top:3px dashed #e74c3c;"></div>
+      <span>Divorced (X)</span>
+    </div>
+    <div class="legend-item">
+      <div style="width:20px;height:3px;background:#f39c12;border-top:3px dotted #f39c12;"></div>
+      <span>Separated (/)</span>
     </div>
   </div>
 

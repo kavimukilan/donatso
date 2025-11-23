@@ -5,7 +5,7 @@
  */
 import f3 from 'family-chart';
 import * as d3 from 'd3';
-import { genogramData, PROBAND_ID } from './data.js';
+import { genogramData, PROBAND_ID, relationshipStatus } from './data.js';
 import { createGenogramCard } from './genogramCard.js';
 
 let store;
@@ -66,6 +66,7 @@ function applyGenogramFeatures() {
   renderIdenticalTwinBars();
   setupHoverHighlighting();
   renderProbandArrow();
+  styleMateLinks();
 }
 
 /**
@@ -339,6 +340,136 @@ function renderProbandArrow() {
     .attr('font-size', '12px')
     .attr('font-weight', 'bold')
     .text('Proband');
+}
+
+/**
+ * Get relationship key for two people (alphabetically sorted)
+ */
+function getRelationshipKey(id1, id2) {
+  return [id1, id2].sort().join('-');
+}
+
+/**
+ * Style mate links based on relationship status (divorced, separated)
+ */
+function styleMateLinks() {
+  const svg = d3.select('#FamilyChart svg');
+
+  // Find all link paths (spouse links are typically horizontal connections)
+  svg.selectAll('.link').each(function() {
+    const link = d3.select(this);
+    const linkData = link.datum();
+
+    // Check if this is a spouse link
+    if (linkData && linkData.source && linkData.target) {
+      const sourceId = linkData.source.data?.id || linkData.source.id;
+      const targetId = linkData.target.data?.id || linkData.target.id;
+
+      if (sourceId && targetId) {
+        const key = getRelationshipKey(sourceId, targetId);
+        const status = relationshipStatus[key];
+
+        if (status === 'divorced') {
+          link.classed('link-divorced', true)
+            .attr('stroke', '#e74c3c')
+            .attr('stroke-dasharray', '8,4')
+            .attr('stroke-width', 3);
+        } else if (status === 'separated') {
+          link.classed('link-separated', true)
+            .attr('stroke', '#f39c12')
+            .attr('stroke-dasharray', '4,4')
+            .attr('stroke-width', 3);
+        }
+      }
+    }
+  });
+
+  // Also add divorce/separation markers on the link lines
+  renderRelationshipMarkers();
+}
+
+/**
+ * Render divorce/separation markers (X or //) on links
+ */
+function renderRelationshipMarkers() {
+  const svg = d3.select('#FamilyChart svg');
+
+  // Remove existing markers
+  svg.selectAll('.relationship-marker').remove();
+
+  // Create markers group
+  let markersGroup = svg.select('.relationship-markers');
+  if (markersGroup.empty()) {
+    markersGroup = svg.insert('g', '.cards-view')
+      .attr('class', 'relationship-markers');
+  }
+
+  // Find spouse pairs with special status
+  genogramData.forEach(person => {
+    if (!person.rels.spouses) return;
+
+    person.rels.spouses.forEach(spouseId => {
+      const key = getRelationshipKey(person.id, spouseId);
+      const status = relationshipStatus[key];
+
+      if (!status) return;
+
+      // Avoid duplicates - only process if person.id < spouseId alphabetically
+      if (person.id > spouseId) return;
+
+      // Get card positions
+      const card1 = svg.select(`[data-id="${person.id}"]`);
+      const card2 = svg.select(`[data-id="${spouseId}"]`);
+
+      if (card1.empty() || card2.empty()) return;
+
+      const getPos = (card) => {
+        const transform = card.attr('transform');
+        const match = transform?.match(/translate\(([^,]+),([^)]+)\)/);
+        return match ? { x: parseFloat(match[1]), y: parseFloat(match[2]) } : null;
+      };
+
+      const pos1 = getPos(card1);
+      const pos2 = getPos(card2);
+
+      if (!pos1 || !pos2) return;
+
+      // Calculate midpoint between spouses
+      const midX = (pos1.x + pos2.x) / 2 + 40;
+      const midY = (pos1.y + pos2.y) / 2 + 30;
+
+      if (status === 'divorced') {
+        // Draw two diagonal lines (divorce symbol)
+        markersGroup.append('line')
+          .attr('class', 'relationship-marker divorce-line')
+          .attr('x1', midX - 8)
+          .attr('y1', midY - 10)
+          .attr('x2', midX + 8)
+          .attr('y2', midY + 10)
+          .attr('stroke', '#e74c3c')
+          .attr('stroke-width', 3);
+
+        markersGroup.append('line')
+          .attr('class', 'relationship-marker divorce-line')
+          .attr('x1', midX + 8)
+          .attr('y1', midY - 10)
+          .attr('x2', midX - 8)
+          .attr('y2', midY + 10)
+          .attr('stroke', '#e74c3c')
+          .attr('stroke-width', 3);
+      } else if (status === 'separated') {
+        // Draw single diagonal line (separated symbol)
+        markersGroup.append('line')
+          .attr('class', 'relationship-marker separated-line')
+          .attr('x1', midX - 6)
+          .attr('y1', midY - 10)
+          .attr('x2', midX + 6)
+          .attr('y2', midY + 10)
+          .attr('stroke', '#f39c12')
+          .attr('stroke-width', 3);
+      }
+    });
+  });
 }
 
 /**
