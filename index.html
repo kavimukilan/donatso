@@ -436,6 +436,121 @@
     .separated-line {
       stroke-linecap: round;
     }
+
+    /* Tooltip */
+    .tooltip {
+      position: fixed;
+      background: rgba(22, 33, 62, 0.98);
+      border: 1px solid #e94560;
+      border-radius: 6px;
+      padding: 0.75rem;
+      font-size: 0.75rem;
+      max-width: 250px;
+      z-index: 1000;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    .tooltip-name {
+      font-weight: bold;
+      color: #e94560;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .tooltip-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.2rem;
+      color: #ccc;
+    }
+
+    .tooltip-row span:first-child {
+      color: #888;
+    }
+
+    /* Info Panel */
+    .info-panel {
+      position: fixed;
+      top: 70px;
+      left: 20px;
+      width: 280px;
+      background: rgba(22, 33, 62, 0.98);
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      z-index: 100;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+
+    .info-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #0f3460;
+      background: #0f3460;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .info-panel-header h3 {
+      margin: 0;
+      color: #e94560;
+      font-size: 1rem;
+    }
+
+    .info-panel-header button {
+      background: transparent;
+      border: none;
+      color: #888;
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .info-panel-header button:hover {
+      color: #e94560;
+    }
+
+    .info-panel-content {
+      padding: 1rem;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.4rem;
+      font-size: 0.8rem;
+    }
+
+    .info-row span:first-child {
+      color: #888;
+    }
+
+    .info-section {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid #0f3460;
+    }
+
+    .info-section h4 {
+      color: #e94560;
+      font-size: 0.75rem;
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .info-section div {
+      font-size: 0.8rem;
+      color: #ccc;
+    }
+
+    /* Selected card highlight */
+    .card.selected .genogram-card {
+      box-shadow: 0 0 0 4px #f1c40f, 0 0 20px rgba(241, 196, 15, 0.5) !important;
+    }
   </style>
 </head>
 <body>
@@ -450,6 +565,9 @@
       <button id="btnZoomOut">Zoom Out</button>
       <button id="btnFit">Fit</button>
       <button id="btnExport">Export SVG</button>
+      <button id="btnExportJSON">Export JSON</button>
+      <button id="btnImportJSON">Import JSON</button>
+      <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
     </div>
   </div>
 
@@ -463,6 +581,39 @@
     <div class="stats-item">
       <span>Proband:</span>
       <span id="probandName">-</span>
+    </div>
+  </div>
+
+  <!-- Tooltip for hover info -->
+  <div class="tooltip" id="tooltip" style="display: none;"></div>
+
+  <!-- Info panel for selected person -->
+  <div class="info-panel" id="infoPanel" style="display: none;">
+    <div class="info-panel-header">
+      <h3 id="infoPanelName">-</h3>
+      <button id="infoPanelClose">×</button>
+    </div>
+    <div class="info-panel-content">
+      <div class="info-row"><span>Gender:</span> <span id="infoPanelGender">-</span></div>
+      <div class="info-row"><span>Birth Year:</span> <span id="infoPanelBirth">-</span></div>
+      <div class="info-row"><span>Status:</span> <span id="infoPanelStatus">-</span></div>
+      <div class="info-row"><span>Attributes:</span> <span id="infoPanelAttrs">-</span></div>
+      <div class="info-section">
+        <h4>Parents</h4>
+        <div id="infoPanelParents">-</div>
+      </div>
+      <div class="info-section">
+        <h4>Spouse(s)</h4>
+        <div id="infoPanelSpouses">-</div>
+      </div>
+      <div class="info-section">
+        <h4>Children</h4>
+        <div id="infoPanelChildren">-</div>
+      </div>
+      <div class="info-section">
+        <h4>Siblings</h4>
+        <div id="infoPanelSiblings">-</div>
+      </div>
     </div>
   </div>
 

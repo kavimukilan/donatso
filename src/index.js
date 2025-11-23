@@ -67,6 +67,8 @@ function applyGenogramFeatures() {
   setupHoverHighlighting();
   renderProbandArrow();
   styleMateLinks();
+  setupTooltips();
+  setupCardSelection();
 }
 
 /**
@@ -472,6 +474,171 @@ function renderRelationshipMarkers() {
   });
 }
 
+let selectedPersonId = null;
+
+/**
+ * Setup tooltips on card hover
+ */
+function setupTooltips() {
+  const svg = d3.select('#FamilyChart svg');
+  const tooltip = document.getElementById('tooltip');
+
+  svg.selectAll('.card').each(function() {
+    const card = d3.select(this);
+    const cardId = card.attr('data-id');
+
+    card
+      .on('mousemove.tooltip', (event) => {
+        const person = genogramData.find(p => p.id === cardId);
+        if (!person) return;
+
+        const data = person.data;
+        const status = getPersonStatus(data);
+
+        tooltip.innerHTML = `
+          <div class="tooltip-name">${data['first name'] || 'Unknown'}</div>
+          <div class="tooltip-row"><span>Gender:</span> <span>${formatGender(data.gender)}</span></div>
+          ${data.birthday ? `<div class="tooltip-row"><span>Born:</span> <span>${data.birthday}</span></div>` : ''}
+          <div class="tooltip-row"><span>Status:</span> <span>${status}</span></div>
+          ${data.attributes?.length ? `<div class="tooltip-row"><span>Attrs:</span> <span>${data.attributes.slice(0, 3).join(', ')}${data.attributes.length > 3 ? '...' : ''}</span></div>` : ''}
+        `;
+
+        tooltip.style.display = 'block';
+        tooltip.style.left = (event.clientX + 15) + 'px';
+        tooltip.style.top = (event.clientY + 15) + 'px';
+      })
+      .on('mouseleave.tooltip', () => {
+        tooltip.style.display = 'none';
+      });
+  });
+}
+
+/**
+ * Get person status string
+ */
+function getPersonStatus(data) {
+  const statuses = [];
+  if (data.deceased) statuses.push('Deceased');
+  if (data.adopted === true) statuses.push('Adopted In');
+  if (data.adopted === 'out') statuses.push('Adopted Out');
+  if (data.multiple) statuses.push(`Twin Group ${data.multiple}`);
+  if (data.identical) statuses.push('Identical Twin');
+  return statuses.length ? statuses.join(', ') : 'Living';
+}
+
+/**
+ * Format gender for display
+ */
+function formatGender(gender) {
+  if (gender === 'M') return 'Male';
+  if (gender === 'F') return 'Female';
+  return 'Unknown';
+}
+
+/**
+ * Setup card click selection
+ */
+function setupCardSelection() {
+  const svg = d3.select('#FamilyChart svg');
+
+  svg.selectAll('.card').each(function() {
+    const card = d3.select(this);
+    const cardId = card.attr('data-id');
+
+    card.on('click.select', (event) => {
+      event.stopPropagation();
+      selectPerson(cardId);
+    });
+  });
+
+  // Click on background to deselect
+  svg.on('click.deselect', () => {
+    deselectPerson();
+  });
+
+  // Setup info panel close button
+  document.getElementById('infoPanelClose')?.addEventListener('click', () => {
+    deselectPerson();
+  });
+}
+
+/**
+ * Select a person and show info panel
+ */
+function selectPerson(personId) {
+  const svg = d3.select('#FamilyChart svg');
+
+  // Remove previous selection
+  svg.selectAll('.card').classed('selected', false);
+
+  // Select new card
+  svg.select(`[data-id="${personId}"]`).classed('selected', true);
+  selectedPersonId = personId;
+
+  // Update info panel
+  updateInfoPanel(personId);
+}
+
+/**
+ * Deselect current person
+ */
+function deselectPerson() {
+  const svg = d3.select('#FamilyChart svg');
+  svg.selectAll('.card').classed('selected', false);
+  selectedPersonId = null;
+
+  const infoPanel = document.getElementById('infoPanel');
+  if (infoPanel) infoPanel.style.display = 'none';
+}
+
+/**
+ * Update info panel with person details
+ */
+function updateInfoPanel(personId) {
+  const person = genogramData.find(p => p.id === personId);
+  if (!person) return;
+
+  const data = person.data;
+  const rels = person.rels;
+
+  document.getElementById('infoPanelName').textContent = data['first name'] || 'Unknown';
+  document.getElementById('infoPanelGender').textContent = formatGender(data.gender);
+  document.getElementById('infoPanelBirth').textContent = data.birthday || '-';
+  document.getElementById('infoPanelStatus').textContent = getPersonStatus(data);
+  document.getElementById('infoPanelAttrs').textContent = data.attributes?.join(', ') || '-';
+
+  // Parents
+  const parents = findParents(personId);
+  document.getElementById('infoPanelParents').textContent =
+    parents.length ? parents.map(p => p.data['first name']).join(', ') : 'None';
+
+  // Spouses
+  const spouses = findMates(personId);
+  const spouseText = spouses.map(s => {
+    const key = getRelationshipKey(personId, s.id);
+    const status = relationshipStatus[key];
+    let suffix = '';
+    if (status === 'divorced') suffix = ' (divorced)';
+    else if (status === 'separated') suffix = ' (separated)';
+    return s.data['first name'] + suffix;
+  }).join(', ');
+  document.getElementById('infoPanelSpouses').textContent = spouseText || 'None';
+
+  // Children
+  const children = findChildren(personId);
+  document.getElementById('infoPanelChildren').textContent =
+    children.length ? children.map(c => c.data['first name']).join(', ') : 'None';
+
+  // Siblings
+  const siblings = findSiblings(personId);
+  document.getElementById('infoPanelSiblings').textContent =
+    siblings.length ? siblings.map(s => s.data['first name']).join(', ') : 'None';
+
+  // Show panel
+  const infoPanel = document.getElementById('infoPanel');
+  if (infoPanel) infoPanel.style.display = 'block';
+}
+
 /**
  * Scroll/zoom to center on the proband
  */
@@ -559,6 +726,96 @@ function setupControls(view) {
       URL.revokeObjectURL(url);
     }
   });
+
+  // JSON Export
+  document.getElementById('btnExportJSON')?.addEventListener('click', () => {
+    exportToJSON();
+  });
+
+  // JSON Import
+  document.getElementById('btnImportJSON')?.addEventListener('click', () => {
+    document.getElementById('jsonFileInput')?.click();
+  });
+
+  document.getElementById('jsonFileInput')?.addEventListener('change', (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      importFromJSON(file);
+    }
+  });
+}
+
+/**
+ * Export genogram data to JSON file
+ */
+function exportToJSON() {
+  const exportData = {
+    version: '1.0',
+    probandId: PROBAND_ID,
+    relationshipStatus: relationshipStatus,
+    members: genogramData,
+    exportDate: new Date().toISOString()
+  };
+
+  const jsonStr = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'family-genogram.json';
+  a.click();
+  URL.revokeObjectURL(url);
+
+  console.log('Exported genogram data to JSON');
+}
+
+/**
+ * Import genogram data from JSON file
+ */
+function importFromJSON(file) {
+  const reader = new FileReader();
+
+  reader.onload = (event) => {
+    try {
+      const importData = JSON.parse(event.target.result);
+
+      // Validate import data
+      if (!importData.members || !Array.isArray(importData.members)) {
+        throw new Error('Invalid genogram data: missing members array');
+      }
+
+      // Update genogramData (note: this requires page reload for full effect)
+      console.log(`Importing ${importData.members.length} family members...`);
+
+      // For now, show what would be imported
+      const summary = `
+Import Summary:
+- Members: ${importData.members.length}
+- Proband: ${importData.probandId || 'Not specified'}
+- Export Date: ${importData.exportDate || 'Unknown'}
+
+Note: Full import requires modifying the data source.
+The data has been logged to the console for manual integration.
+      `;
+
+      alert(summary);
+      console.log('Import data:', importData);
+
+      // Store in window for manual access
+      window.importedGenogramData = importData;
+      console.log('Access imported data via: window.importedGenogramData');
+
+    } catch (error) {
+      console.error('Import error:', error);
+      alert(`Error importing JSON: ${error.message}`);
+    }
+  };
+
+  reader.onerror = () => {
+    alert('Error reading file');
+  };
+
+  reader.readAsText(file);
 }
 
 // Navigation API (exported for external use)
@@ -608,5 +865,8 @@ window.genogramAPI = {
   findSiblings,
   scrollToProband,
   getData: () => genogramData,
-  getProband: () => genogramData.find(p => p.id === PROBAND_ID)
+  getProband: () => genogramData.find(p => p.id === PROBAND_ID),
+  exportToJSON,
+  selectPerson,
+  deselectPerson
 };
