@@ -288,6 +288,46 @@
     .f3 .link.spouse {
       stroke: #e94560;
     }
+
+    /* Hover highlighting styles */
+    .card.highlighted-self .genogram-card {
+      box-shadow: 0 0 0 4px #3498db, 0 0 20px rgba(52, 152, 219, 0.5);
+    }
+
+    .card.highlighted-ancestor .genogram-card {
+      box-shadow: 0 0 0 3px #e74c3c, 0 0 15px rgba(231, 76, 60, 0.4);
+    }
+
+    .card.highlighted-descendant .genogram-card {
+      box-shadow: 0 0 0 3px #27ae60, 0 0 15px rgba(39, 174, 96, 0.4);
+    }
+
+    /* Dim non-highlighted cards when hovering */
+    .card:not(.highlighted-self):not(.highlighted-ancestor):not(.highlighted-descendant) {
+      opacity: 0.4;
+      transition: opacity 0.3s;
+    }
+
+    .card.highlighted-self,
+    .card.highlighted-ancestor,
+    .card.highlighted-descendant {
+      opacity: 1;
+      transition: opacity 0.3s;
+    }
+
+    /* Twin connector styling */
+    .twin-connector {
+      pointer-events: none;
+    }
+
+    .identical-twin-bar {
+      pointer-events: none;
+    }
+
+    /* Proband arrow */
+    .proband-arrow-svg {
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -297,6 +337,7 @@
       <span class="header-subtitle">Open Source (donatso/family-chart)</span>
     </div>
     <div class="header-controls">
+      <button id="btnProband">Go to Proband</button>
       <button id="btnZoomIn">Zoom In</button>
       <button id="btnZoomOut">Zoom Out</button>
       <button id="btnFit">Fit</button>
@@ -330,6 +371,28 @@
     <div class="legend-item">
       <div class="legend-shape unknown"></div>
       <span>Unknown</span>
+    </div>
+    <h4 style="margin-top: 0.75rem;">Hover Highlighting</h4>
+    <div class="legend-item">
+      <div style="width:16px;height:16px;border:3px solid #3498db;border-radius:2px;"></div>
+      <span>Selected</span>
+    </div>
+    <div class="legend-item">
+      <div style="width:16px;height:16px;border:3px solid #e74c3c;border-radius:2px;"></div>
+      <span>Ancestors</span>
+    </div>
+    <div class="legend-item">
+      <div style="width:16px;height:16px;border:3px solid #27ae60;border-radius:2px;"></div>
+      <span>Descendants</span>
+    </div>
+    <h4 style="margin-top: 0.75rem;">Twin Lines</h4>
+    <div class="legend-item">
+      <div style="width:20px;height:3px;background:#e94560;"></div>
+      <span>Twin/Multiple</span>
+    </div>
+    <div class="legend-item">
+      <div style="width:20px;height:3px;background:#9b59b6;"></div>
+      <span>Identical</span>
     </div>
   </div>
 
