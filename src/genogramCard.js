@@ -38,19 +38,34 @@ function genogramCardHtml(d) {
   const birth = data.birthday || '';
   const deceased = data.deceased || false;
   const adopted = data.adopted || false;
+  const pregnancy = data.pregnancy || false; // Pregnancy indicator
   const multiple = data.multiple; // Twin/triplet marker
   const attributes = data.attributes || [];
   const isProband = d.id === PROBAND_ID;
 
+  // Detect stillbirth/miscarriage: unknown sex, deceased, no birth year
+  const isStillbirth = (gender === '?' && deceased && !birth);
+  const isMiscarriage = data.miscarriage || false;
+
   // Determine shape class
   let shapeClass = 'genogram-shape-unknown';
-  if (gender === 'M') shapeClass = 'genogram-shape-male';
-  else if (gender === 'F') shapeClass = 'genogram-shape-female';
+  if (pregnancy) {
+    shapeClass = 'genogram-shape-pregnancy';
+  } else if (isMiscarriage) {
+    shapeClass = 'genogram-shape-miscarriage';
+  } else if (isStillbirth) {
+    shapeClass = 'genogram-shape-stillbirth';
+  } else if (gender === 'M') {
+    shapeClass = 'genogram-shape-male';
+  } else if (gender === 'F') {
+    shapeClass = 'genogram-shape-female';
+  }
 
   // Build classes
   const classes = [shapeClass];
-  if (deceased) classes.push('genogram-deceased');
-  if (adopted) classes.push('genogram-adopted');
+  if (deceased && !isStillbirth && !isMiscarriage) classes.push('genogram-deceased');
+  if (adopted === true) classes.push('genogram-adopted');
+  if (adopted === 'out') classes.push('genogram-adopted-out');
   if (isProband) classes.push('genogram-proband');
 
   // Build attribute quadrants HTML
