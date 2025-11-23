@@ -251,7 +251,8 @@ function highlightRelated(personId, highlight) {
   const svg = d3.select('#FamilyChart svg');
 
   if (!highlight) {
-    // Reset all cards
+    // Reset all cards and remove highlighting state
+    svg.classed('highlighting-active', false);
     svg.selectAll('.card')
       .classed('highlighted-ancestor', false)
       .classed('highlighted-descendant', false)
@@ -260,6 +261,9 @@ function highlightRelated(personId, highlight) {
       .classed('highlighted-link', false);
     return;
   }
+
+  // Enable highlighting state on SVG
+  svg.classed('highlighting-active', true);
 
   // Find the person
   const person = genogramData.find(p => p.id === personId);
@@ -504,8 +508,27 @@ function setupTooltips() {
         `;
 
         tooltip.style.display = 'block';
-        tooltip.style.left = (event.clientX + 15) + 'px';
-        tooltip.style.top = (event.clientY + 15) + 'px';
+
+        // Calculate position with boundary checking
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        let left = event.clientX + 15;
+        let top = event.clientY + 15;
+
+        // Adjust if tooltip would go off right edge
+        if (left + tooltipRect.width > viewportWidth - 10) {
+          left = event.clientX - tooltipRect.width - 15;
+        }
+
+        // Adjust if tooltip would go off bottom edge
+        if (top + tooltipRect.height > viewportHeight - 10) {
+          top = event.clientY - tooltipRect.height - 15;
+        }
+
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
       })
       .on('mouseleave.tooltip', () => {
         tooltip.style.display = 'none';
@@ -535,6 +558,8 @@ function formatGender(gender) {
   return 'Unknown';
 }
 
+let infoPanelCloseListenerAdded = false;
+
 /**
  * Setup card click selection
  */
@@ -556,10 +581,21 @@ function setupCardSelection() {
     deselectPerson();
   });
 
-  // Setup info panel close button
-  document.getElementById('infoPanelClose')?.addEventListener('click', () => {
-    deselectPerson();
-  });
+  // Setup info panel close button (only once)
+  if (!infoPanelCloseListenerAdded) {
+    document.getElementById('infoPanelClose')?.addEventListener('click', () => {
+      deselectPerson();
+    });
+
+    // Keyboard support - Escape to deselect
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        deselectPerson();
+      }
+    });
+
+    infoPanelCloseListenerAdded = true;
+  }
 }
 
 /**
@@ -599,7 +635,6 @@ function updateInfoPanel(personId) {
   if (!person) return;
 
   const data = person.data;
-  const rels = person.rels;
 
   document.getElementById('infoPanelName').textContent = data['first name'] || 'Unknown';
   document.getElementById('infoPanelGender').textContent = formatGender(data.gender);

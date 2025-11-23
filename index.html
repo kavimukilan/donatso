@@ -302,6 +302,34 @@
       border: 1px solid #0f3460;
       font-size: 0.75rem;
       z-index: 100;
+      max-height: 80vh;
+      overflow-y: auto;
+      transition: max-height 0.3s ease;
+    }
+
+    .legend-header {
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .legend-toggle {
+      font-size: 0.6rem;
+      transition: transform 0.3s;
+    }
+
+    .legend.collapsed .legend-toggle {
+      transform: rotate(-90deg);
+    }
+
+    .legend.collapsed .legend-content {
+      display: none;
+    }
+
+    .legend.collapsed {
+      padding: 0.5rem 1rem;
     }
 
     .legend h4 {
@@ -387,17 +415,21 @@
       box-shadow: 0 0 0 3px #27ae60, 0 0 15px rgba(39, 174, 96, 0.4);
     }
 
-    /* Dim non-highlighted cards when hovering */
-    .card:not(.highlighted-self):not(.highlighted-ancestor):not(.highlighted-descendant) {
+    /* Dim non-highlighted cards only when highlighting is active */
+    .highlighting-active .card:not(.highlighted-self):not(.highlighted-ancestor):not(.highlighted-descendant) {
       opacity: 0.4;
-      transition: opacity 0.3s;
+      transition: opacity 0.2s;
+    }
+
+    .card {
+      transition: opacity 0.2s;
     }
 
     .card.highlighted-self,
     .card.highlighted-ancestor,
     .card.highlighted-descendant {
       opacity: 1;
-      transition: opacity 0.3s;
+      transition: opacity 0.2s;
     }
 
     /* Twin connector styling */
@@ -617,21 +649,24 @@
     </div>
   </div>
 
-  <div class="legend">
-    <h4>Legend</h4>
-    <div class="legend-item">
-      <div class="legend-shape male"></div>
-      <span>Male</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-shape female"></div>
-      <span>Female</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-shape unknown"></div>
-      <span>Unknown</span>
-    </div>
-    <h4 style="margin-top: 0.75rem;">Special Symbols</h4>
+  <div class="legend" id="legend">
+    <h4 class="legend-header" onclick="document.getElementById('legend').classList.toggle('collapsed')">
+      Legend <span class="legend-toggle">▼</span>
+    </h4>
+    <div class="legend-content">
+      <div class="legend-item">
+        <div class="legend-shape male"></div>
+        <span>Male</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-shape female"></div>
+        <span>Female</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-shape unknown"></div>
+        <span>Unknown</span>
+      </div>
+      <h4 style="margin-top: 0.75rem;">Special Symbols</h4>
     <div class="legend-item">
       <div style="width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:17px solid #9b59b6;"></div>
       <span>Pregnancy</span>
@@ -683,6 +718,7 @@
     <div class="legend-item">
       <div style="width:20px;height:3px;background:#f39c12;border-top:3px dotted #f39c12;"></div>
       <span>Separated (/)</span>
+    </div>
     </div>
   </div>
 
